@@ -20,7 +20,7 @@ const displayName = computed(() => {
   return typeof configured === 'string' && configured.trim() ? configured.trim() : fallbackName
 })
 const logoSrc = computed(() => typeof testBrand.value.logoSrc === 'string' && /^\/(?!\/)[^?#]*$/.test(testBrand.value.logoSrc) ? testBrand.value.logoSrc : '')
-const logoAlt = computed(() => typeof testBrand.value.logoAlt === 'string' ? testBrand.logoAlt : '')
+const logoAlt = computed(() => typeof testBrand.value.logoAlt === 'string' ? testBrand.value.logoAlt : '')
 const imageClass = computed(() => props.compact ? 'size-8' : 'size-10')
 watch(logoSrc, () => { imageFailed.value = false })
 </script>
