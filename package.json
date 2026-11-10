@@ -1,0 +1,55 @@
+{
+  "name": "application-test-template",
+  "version": "0.1.0",
+  "description": "Reusable Nuxt application foundation for independent capability acceptance testing.",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "keywords": [
+    "demonstration application",
+    "application template",
+    "layers",
+    "nuxt",
+    "nuxt 4",
+    "starter template",
+    "typescript",
+    "vue",
+    "capability testing"
+  ],
+  "packageManager": "pnpm@12.16.1",
+  "engines": {
+    "node": "26.13.0",
+    "pnpm": "12.16.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nuxt-layers-test/application-test-template.git"
+  },
+  "bugs": {
+    "url": "https://github.com/nuxt-layers-test/application-test-template/issues"
+  },
+  "authors": [
+    {
+      "name": "Steve R Lewis",
+      "email": "me@steve-lewis.uk",
+      "url": "https://www.steve-lewis.uk"
+    }
+  ],
+  "funding": {
+    "type": "individual",
+    "url": "https://patreon.com/TheModuleFactory"
+  },
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "nuxt": "^4.6.3",
+    "vue": "^3.5.44",
+    "vue-router": "^5.4.0",
+    "@nuxt-layers/theme-manager": "github:nuxt-layers/theme-manager#master"
+  }
+}

@@ -1,0 +1,75 @@
+# Nuxt application test template
+# Keep generated output, secrets and local machine state out of Git.
+# Keep source directories, scenarios and test fixtures visible to version control.
+
+# 1. Package managers and dependencies
+**/node_modules/
+**/.pnpm-store/
+**/.pnp
+**/.pnp.*
+**/package-lock.json
+**/yarn.lock
+# pnpm-lock.yaml is canonical and must be committed.
+
+# Package manager and runtime logs
+**/npm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+**/pnpm-debug.log*
+**/firebase-debug.log*
+**/*.log
+
+# 2. Local environment and credentials
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.*.example
+**/service-account.json
+
+# 3. OS and editor noise
+**/Thumbs.db
+**/.DS_Store
+**/.AppleDouble
+**/.Spotlight-V100/
+**/.Trashes/
+**/lost+found/
+.idea/
+.fleet/
+.vscode/
+
+# 4. Temporary files and editor backups
+**/*.tmp
+**/*.bak
+**/*.swp
+**/*.swo
+**/*.orig
+**/tmp/
+**/temp/
+
+# 5. Nuxt, Nitro, Vite and generated build artefacts
+**/.cache/
+**/.data/
+**/.nuxi/
+**/.nuxt/
+**/.output/
+**/.nitro/
+**/.vite/
+**/dist/
+**/.netlify/
+**/.vercel/
+**/*.tsbuildinfo
+**/out-tsc/
+
+# 6. Testing and documentation artefacts
+**/.vitest/
+**/coverage/
+**/playwright-report/
+**/test-results/
+**/storybook-static/
+**/cypress/screenshots/
+**/cypress/videos/
+**/docs/.vitepress/dist/
+**/docs/.vitepress/cache/
+
+# Do not ignore .storybook/ configuration, Nitro configuration,
+# source data/, development/, storage/, sandbox/ or fixture directories.
