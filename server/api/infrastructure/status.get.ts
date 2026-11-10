@@ -1,4 +1,5 @@
 import { createRequire } from 'node:module'
+import type { Connection as TemporalConnection } from '@temporalio/client'
 
 const requireDependency = createRequire(import.meta.url)
 
@@ -51,7 +52,7 @@ export default defineEventHandler(async (event) => {
 
   let temporal: Probe = unavailable('No server-side Temporal frontend address configured')
   if (config.temporalAddress) {
-    let connection: { close(): Promise<void> } | undefined
+    let connection: TemporalConnection | undefined
     try {
       const { Connection } = requireDependency('@temporalio/client') as typeof import('@temporalio/client')
       connection = await Connection.connect({ address: config.temporalAddress })
