@@ -1,6 +1,3 @@
-import { Client as PgClient } from 'pg'
-import { Connection } from '@temporalio/client'
-
 type Probe = { status: 'passed' | 'failed' | 'not-configured'; detail: string }
 const unavailable = (detail: string): Probe => ({ status: 'not-configured', detail })
 
@@ -20,6 +17,8 @@ export default defineEventHandler(async (event) => {
 
   let postgres: Probe = unavailable('No server-side database URL configured')
   if (config.databaseUrl) {
+    // Resolve optional service clients only for an authorised diagnostic request.
+    const { Client: PgClient } = await import('pg')
     const client = new PgClient({
       connectionString: config.databaseUrl,
       connectionTimeoutMillis: 3000,
@@ -48,8 +47,9 @@ export default defineEventHandler(async (event) => {
 
   let temporal: Probe = unavailable('No server-side Temporal frontend address configured')
   if (config.temporalAddress) {
-    let connection: Connection | undefined
+    let connection: Awaited<ReturnType<typeof import('@temporalio/client')['Connection']['connect']>> | undefined
     try {
+      const { Connection } = await import('@temporalio/client')
       connection = await Connection.connect({ address: config.temporalAddress })
       await connection.workflowService.getSystemInfo({})
       temporal = { status: 'passed', detail: 'Temporal frontend responded to a gRPC system-info request' }
