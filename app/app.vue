@@ -24,6 +24,9 @@
             <NuxtLink to="/theme-manager" class="test-nav__link gap-step-sm rounded-control p-step-sm text-pen-base-default hover:bg-fill-base-hover hover:text-pen-base-hover focus-visible:outline-focus focus-visible:outline-offset-focus focus-visible:outline-edge-base-focus" active-class="test-nav__link--active bg-fill-primary-selected text-pen-primary-selected border-edge-primary-selected" @click="mobileOpen = false">
               <img v-if="!themeManagerLogoFailed" src="/theme-manager-logo.png" alt="" class="size-6 shrink-0 rounded-control object-contain" @error="themeManagerLogoFailed = true" /><span v-else aria-hidden="true">◈</span><span v-if="!collapsed || mobileOpen">Theme Manager</span>
             </NuxtLink>
+            <NuxtLink to="/admin/infrastructure" class="test-nav__link gap-step-sm rounded-control p-step-sm text-pen-base-default hover:bg-fill-base-hover hover:text-pen-base-hover focus-visible:outline-focus focus-visible:outline-offset-focus focus-visible:outline-edge-base-focus" active-class="test-nav__link--active bg-fill-primary-selected text-pen-primary-selected border-edge-primary-selected" @click="mobileOpen = false">
+              <span aria-hidden="true" class="grid size-6 shrink-0 place-items-center">▤</span><span v-if="!collapsed || mobileOpen">Infrastructure</span>
+            </NuxtLink>
           </div>
         </div>
       </nav>
