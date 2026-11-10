@@ -5,5 +5,7 @@ export default defineNuxtConfig({
   extends: ['@nuxt-layers/theme-manager'],
   runtimeConfig: {
     themeManager: { mode: 'test' },
+    // Server-only: do not put credentials or frontend address in public config.
+    infraTest: { enabled: false, databaseUrl: '', temporalAddress: '' },
   },
 })
