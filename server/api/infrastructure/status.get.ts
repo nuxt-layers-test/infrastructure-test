@@ -1,3 +1,5 @@
+import type { Connection as TemporalConnection } from '@temporalio/client'
+
 type Probe = { status: 'passed' | 'failed' | 'not-configured'; detail: string }
 const unavailable = (detail: string): Probe => ({ status: 'not-configured', detail })
 
@@ -47,7 +49,7 @@ export default defineEventHandler(async (event) => {
 
   let temporal: Probe = unavailable('No server-side Temporal frontend address configured')
   if (config.temporalAddress) {
-    let connection: Awaited<ReturnType<typeof import('@temporalio/client')['Connection']['connect']>> | undefined
+    let connection: TemporalConnection | undefined
     try {
       const { Connection } = await import('@temporalio/client')
       connection = await Connection.connect({ address: config.temporalAddress })
