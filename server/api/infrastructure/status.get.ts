@@ -1,0 +1,65 @@
+import { Client as PgClient } from 'pg'
+import { Connection } from '@temporalio/client'
+
+type Probe = { status: 'passed' | 'failed' | 'not-configured'; detail: string }
+const unavailable = (detail: string): Probe => ({ status: 'not-configured', detail })
+
+export default defineEventHandler(async (event) => {
+  // Theme Manager test mode is deliberately unauthenticated, therefore these
+  // diagnostics MUST NOT be exposed to a remote caller or in production.
+  const ip = getRequestIP(event, { xForwardedFor: false })
+  if (process.env.NODE_ENV !== 'development' ||
+      !['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(ip || '')) {
+    throw createError({ statusCode: 404, statusMessage: 'Not Found' })
+  }
+
+  const config = useRuntimeConfig(event).infraTest
+  if (String(config?.enabled) !== 'true') {
+    throw createError({ statusCode: 404, statusMessage: 'Not Found' })
+  }
+
+  let postgres: Probe = unavailable('No server-side database URL configured')
+  if (config.databaseUrl) {
+    const client = new PgClient({
+      connectionString: config.databaseUrl,
+      connectionTimeoutMillis: 3000,
+      query_timeout: 3000,
+      application_name: 'nuxt-layers-infrastructure-test',
+    })
+    try {
+      await client.connect()
+      const result = await client.query(
+        "SELECT current_database() AS database_name, current_user AS role_name, current_setting('server_version_num') AS version"
+      )
+      const row = result.rows[0]
+      const major = Math.floor(Number(row?.version) / 10000)
+      postgres = {
+        status: major === 18 ? 'passed' : 'failed',
+        detail: major === 18
+          ? 'PostgreSQL 18 SQL query succeeded using the configured server-side role'
+          : 'Connected PostgreSQL is not version 18',
+      }
+    } catch {
+      postgres = { status: 'failed', detail: 'Database connection or read-only SQL probe failed' }
+    } finally {
+      try { await client.end() } catch { /* No credentials or connection internals in output */ }
+    }
+  }
+
+  let temporal: Probe = unavailable('No server-side Temporal frontend address configured')
+  if (config.temporalAddress) {
+    let connection: Connection | undefined
+    try {
+      connection = await Connection.connect({ address: config.temporalAddress })
+      await connection.workflowService.getSystemInfo({})
+      temporal = { status: 'passed', detail: 'Temporal frontend responded to a gRPC system-info request' }
+    } catch {
+      temporal = { status: 'failed', detail: 'Temporal frontend connection or gRPC probe failed' }
+    } finally {
+      if (connection) await connection.close()
+    }
+  }
+
+  setHeader(event, 'Cache-Control', 'no-store')
+  return { postgres, temporal, checkedAt: new Date().toISOString() }
+})
