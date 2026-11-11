@@ -28,7 +28,20 @@ export default defineEventHandler(async (event) => {
         localIsLoopback,
       })
     }
-    throw createError({ statusCode: 404, statusMessage: 'Not Found' })
+    throw createError({
+      statusCode: 404,
+      statusMessage: 'Not Found',
+      // Development-only booleans; never expose actual IPs, headers or secrets.
+      ...(developmentMode ? {
+        data: {
+          diagnostic: 'local-access-guard',
+          remoteSocketPresent: Boolean(remoteAddress),
+          localSocketPresent: Boolean(localAddress),
+          remoteIsLoopback,
+          localIsLoopback,
+        },
+      } : {}),
+    })
   }
 
   const config = useRuntimeConfig(event).infraTest
