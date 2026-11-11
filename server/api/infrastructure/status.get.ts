@@ -14,9 +14,20 @@ export default defineEventHandler(async (event) => {
   const remoteAddress = event.node.req.socket?.remoteAddress
   const localAddress = event.node.req.socket?.localAddress
   const loopback = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1'])
-  if (process.env.NODE_ENV !== 'development' ||
-      !loopback.has(remoteAddress || '') ||
-      !loopback.has(localAddress || '')) {
+  const developmentMode = process.env.NODE_ENV === 'development'
+  const remoteIsLoopback = loopback.has(remoteAddress || '')
+  const localIsLoopback = loopback.has(localAddress || '')
+  if (!developmentMode || !remoteIsLoopback || !localIsLoopback) {
+    // Do not include host headers, IP addresses, credentials or runtime config.
+    // This diagnostic only reports which guard failed in local development.
+    if (developmentMode) {
+      console.warn('[infrastructure-test] local diagnostic access rejected', {
+        remoteSocketPresent: Boolean(remoteAddress),
+        localSocketPresent: Boolean(localAddress),
+        remoteIsLoopback,
+        localIsLoopback,
+      })
+    }
     throw createError({ statusCode: 404, statusMessage: 'Not Found' })
   }
 
