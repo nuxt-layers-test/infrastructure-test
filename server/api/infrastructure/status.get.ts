@@ -9,9 +9,14 @@ const unavailable = (detail: string): Probe => ({ status: 'not-configured', deta
 export default defineEventHandler(async (event) => {
   // Theme Manager test mode is deliberately unauthenticated, therefore these
   // diagnostics MUST NOT be exposed to a remote caller or in production.
-  const ip = getRequestIP(event, { xForwardedFor: false })
+  // In Nuxt dev, getRequestIP can be absent even for a loopback request.
+  // Use only the actual TCP socket address, never Host or forwarded headers.
+  const remoteAddress = event.node.req.socket?.remoteAddress
+  const localAddress = event.node.req.socket?.localAddress
+  const loopback = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1'])
   if (process.env.NODE_ENV !== 'development' ||
-      !['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(ip || '')) {
+      !loopback.has(remoteAddress || '') ||
+      !loopback.has(localAddress || '')) {
     throw createError({ statusCode: 404, statusMessage: 'Not Found' })
   }
 
