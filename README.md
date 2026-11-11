@@ -1,54 +1,50 @@
-# Application Test Template
+# Infrastructure Test Application
 
-> **In short:** a minimal Nuxt application template for independent capability acceptance and presentation testing in the Nuxt Layers ecosystem.
+Derived from [application-test-template](https://github.com/nuxt-layers-test/application-test-template). This repository owns infrastructure-specific integration scenarios; the shared test template remains independent of PostgreSQL and Temporal.
 
-## Purpose
+## Local setup
 
-Use GitHub's **Use this template** action to create a separate test application for a capability. Each generated repository owns its capability dependencies, server-side composition, scenarios, fixtures and acceptance results. The template owns no capability-specific implementation.
+Start the services in [nuxt-layers/infrastructure](https://github.com/nuxt-layers/infrastructure) using `.\\scripts\\start.ps1 -Temporal`. The infrastructure should already have passed its PostgreSQL and Temporal acceptance suites.
 
-## Getting started
+Copy `.env.example` to `.env` **in this repository** and adjust the PostgreSQL URL to match the development `infrastructure/.env` credentials. Keep all credentials server-side. Do not publish or remotely expose this template: it includes Theme Manager's unauthenticated test mode and development-only diagnostics.
 
-Install the Node.js version declared in `.node-version`, select it with `fnm use`, and use the pnpm version declared in `package.json`. From the generated project:
+**Development toolchain:** Node.js 26.13.0, Corepack 0.36.0 and pnpm 12.16.1. Run `./scripts/verify-toolchain.ps1` on Windows. Nuxt 4.6.4 (security patch), TypeScript 6.0.3 and vue-tsc 3.3.14 are pinned in `package.json`; after regenerating the lockfile, run `corepack pnpm typecheck` and `corepack pnpm build` locally or in CI. The assistant does not execute these commands.
+
+**Dependency lockfile:** This derived repository inherits the template's lockfile, which does not yet contain the new `pg` and `@temporalio/client` packages. After checking out this PR, regenerate and commit the reviewed lockfile locally using `corepack pnpm install --no-frozen-lockfile`. CI should subsequently use `corepack pnpm install --frozen-lockfile`. Do not merge the PR until this is resolved and local/CI validation passes.
 
 ```powershell
-pnpm install --frozen-lockfile
-pnpm dev
+corepack pnpm install --no-frozen-lockfile
+corepack pnpm typecheck
+corepack pnpm dev --host 127.0.0.1
 ```
 
-The local development server defaults to `http://localhost:3000`.
+Open `http://127.0.0.1:3000/admin`, then use **Infrastructure** to visit `/admin/infrastructure` and select **Check connections**.
 
-## Boundaries
+## What is tested
 
-- Consume a capability only through its published `CONTRACT.md` and public exports.
-- Keep capability behaviour, administrative screens and server-side enforcement in their owning capability.
-- Configure application navigation, fixtures and test scenarios in each derived repository.
-- Consume Theme Manager's public semantic vocabulary; do not define another theme system.
-- Use British English, accessible interaction and Nuxt's built-in internationalisation-friendly primitives.
+- PostgreSQL: a real SQL query for connection, configured role and PostgreSQL 18 server version. Queries are read-only and do not expose values to the browser.
+- Temporal: a real frontend gRPC system-info request through the TypeScript SDK. This checks the Temporal frontend but not a gateway workflow.
 
-## Shared test application
+Tests are **opt-in and fail closed**: the API route returns 404 outside development, for non-loopback requests, or unless `NUXT_INFRA_TEST_ENABLED=true`. It returns fixed outcome messages rather than exception contents, credentials or SQL results. Environment settings are read from Nuxt private `runtimeConfig`.
 
-The template provides a themed application shell, a separate homepage at `/`, an admin/test dashboard at `/admin`, responsive collapsible navigation and Theme Manager in explicit local `test` mode. Derived test applications add capability-specific scenarios and navigation; they do not need to implement their own application shell.
+The Temporal Gateway repository currently lacks its public `CONTRACT.md` and implementation. No gateway interface is invented or consumed in this PR. After its public contract is available, a later PR will replace the direct Temporal SDK connectivity probe with a gateway-contract acceptance scenario.
 
-Open `http://localhost:3000/` for the homepage, `/admin` for the test dashboard or `/theme-manager` to exercise Theme Manager. The homepage has no administration sidebar; the logo in the test-area top bar returns home, while the homepage links into `/admin`. Sidebar sections can be expanded and collapsed, and mobile navigation is overlaid.
+## Out of scope
 
-This is a **local-only development and test template**. Theme Manager test mode provides unauthenticated management endpoints, so do not publish the template as a public server.
+No application runtime database roles, authorisation, tenant isolation/RLS, capability data mutations, gateway workflow execution, production deployments or backups are established here. The current sample database URL uses disposable development bootstrap credentials; a dedicated least-privilege diagnostic role is required before broader integration.
 
-The Theme Manager dependency tracks accepted development `master`; after its revision changes, refresh and commit the dependency lockfile to capture the exact tested commit. Before release adoption, replace the moving Git reference with an immutable release reference.
+All tests and builds must be performed by CI or the user's local machine, not by the assistant.
 
-## Top application bar
+## Shared application shell
 
-The shared shell includes a logo/identity link, a Theme Manager-backed Appearance menu (theme picker and system/light/dark preference), and a reserved authentication-status area.
+The inherited Theme Manager UI, homepage, appearance preferences, `/admin` dashboard and navigation remain available. Continue to use the template's public design vocabulary and host-owned composition.
 
-The authentication area deliberately reports **Not signed in**; no authentication layer or sign-in action is supplied by the template. Derived test applications can connect a real authentication capability later. The colour-mode preference is stored in the test application's `test-colour-mode` cookie; it is separate from Theme Manager's selected-theme cookie. As in the reference site, the host controls the `html.dark` class.
+## Windows ESM SSR failure triage
 
-The header is part of the shared test application and does not add UI dependencies to Theme Manager.
+If the root route shows `ERR_UNSUPPORTED_ESM_URL_SCHEME` with a drive-letter protocol such as `d:`, the error occurs during Windows server module loading, before the infrastructure diagnostics run. The observed error string also appears in a known Nuxt Rspack/Webpack issue, but this project has **not** selected that builder. Do not claim this issue is conclusively fixed by updating Nuxt. After a locked reinstall and regeneration of `.nuxt`, rerun the local dev server and inspect the full server-side stack trace if it persists. Avoid globally disabling SSR, Node module security or replacing all absolute paths by string substitution. Server-only Temporal and PostgreSQL SDK imports have been deferred to authorised diagnostic requests to reduce eager server module loading.
 
-## Configurable branding
+## Local diagnostics access
 
-The homepage, top bar and sidebar share `TestBrand`, which reads `testBrand` from the host application's `app/app.config.ts`. The initial logo is expected at `public/nuxt-layers-logo.png`; until that image is added, a simple fallback mark is shown.
+Nuxt's dev request adapter may omit TCP socket metadata even for direct requests to `127.0.0.1`; an absent socket is therefore not sufficient evidence of a remote client. The API requires development mode, `NUXT_INFRA_TEST_ENABLED=true`, a loopback HTTP Host value (without trusting forwarded-host headers), and rejects non-loopback TCP addresses when they are supplied. **The actual access boundary is the Nuxt development server's listener bound to `127.0.0.1`** in `nuxt.config.ts`. Never override it with `--host 0.0.0.0`, `--public`, a tunnel or a network-facing reverse proxy. Host headers alone are spoofable and must never be treated as authentication. These diagnostics must not be used beyond this disposable local test environment.
 
-Derived test applications can override `testBrand.name`, `testBrand.logoSrc` and `testBrand.logoAlt` in their own application config without editing shared shell components. The name defaults to **Nuxt Layers Test** if omitted or blank, is rendered as ordinary Vue text (not HTML), and is truncated when space is limited. The logo path must be a local absolute path (for example `/my-brand.png`); invalid paths fall back to the placeholder mark. Text is shown beside the logo on the homepage and expanded sidebar, and on wider toolbar layouts. Keep brand selection host-owned; a future Configuration capability can supply these settings through the host without introducing a Theme Manager dependency.
-
-## Capability navigation identity
-
-The Theme Manager sidebar link uses the `/theme-manager-logo.png` public asset owned by the composed Theme Manager layer. Its text label remains accessible. The image is optional and hidden on load failure. This link requires Theme Manager PR #18 to be merged and the consumer lockfile refreshed to its accepted revision; verify the asset responds at `/theme-manager-logo.png` before merging this integration PR.
+The diagnostics page is registered at `/admin/infrastructure` through the Nuxt `pages:extend` hook, retaining a flat page rather than requiring a nested `<NuxtPage />` in `/admin`.

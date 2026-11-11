@@ -11,6 +11,11 @@
         <NuxtLink to="/theme-manager" class="inline-block rounded-control border border-edge-primary-default bg-fill-primary-default px-step-sm py-step-xs font-medium text-pen-primary-default focus-visible:outline-focus focus-visible:outline-edge-primary-focus">Open Theme Manager</NuxtLink>
       </article>
       <article class="rounded-card border border-edge-base-default bg-fill-base-default p-step-md">
+        <h2 class="text-heading font-bold text-pen-base-default">Infrastructure</h2>
+        <p class="my-step-sm text-body text-pen-muted-default">Check local PostgreSQL 18 and Temporal frontend connectivity through restricted server-only diagnostics.</p>
+        <NuxtLink to="/admin/infrastructure" class="inline-block rounded-control border border-edge-primary-default bg-fill-primary-default px-step-sm py-step-xs font-medium text-pen-primary-default focus-visible:outline-focus focus-visible:outline-edge-primary-focus">Open infrastructure checks</NuxtLink>
+      </article>
+      <article class="rounded-card border border-edge-base-default bg-fill-base-default p-step-md">
         <h2 class="text-heading font-bold text-pen-base-default">Future capabilities</h2>
         <p class="mt-step-sm text-body text-pen-muted-default">Each generated test application adds its own navigation entries and acceptance scenarios without changing the shared shell.</p>
       </article>

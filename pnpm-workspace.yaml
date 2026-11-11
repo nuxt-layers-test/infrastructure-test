@@ -1,3 +1,4 @@
 # Build scripts required by approved dependencies.
 allowBuilds:
   esbuild: true
+  protobufjs: true

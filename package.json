@@ -1,7 +1,7 @@
 {
-  "name": "application-test-template",
+  "name": "infrastructure-test",
   "version": "0.1.0",
-  "description": "Reusable Nuxt application foundation for independent capability acceptance testing.",
+  "description": "Local Nuxt Layers infrastructure integration and acceptance test application.",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -23,10 +23,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/nuxt-layers-test/application-test-template.git"
+    "url": "https://github.com/nuxt-layers-test/infrastructure-test.git"
   },
   "bugs": {
-    "url": "https://github.com/nuxt-layers-test/application-test-template/issues"
+    "url": "https://github.com/nuxt-layers-test/infrastructure-test/issues"
   },
   "authors": [
     {
@@ -44,12 +44,20 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "typecheck": "nuxt typecheck"
   },
   "dependencies": {
-    "nuxt": "^4.6.3",
+    "nuxt": "4.6.4",
     "vue": "^3.5.44",
     "vue-router": "^5.4.0",
-    "@nuxt-layers/theme-manager": "github:nuxt-layers/theme-manager#master"
+    "@nuxt-layers/theme-manager": "github:nuxt-layers/theme-manager#master",
+    "@temporalio/client": "1.24.0",
+    "pg": "8.16.3"
+  },
+  "devDependencies": {
+    "@types/pg": "8.15.5",
+    "typescript": "6.0.3",
+    "vue-tsc": "3.3.14"
   }
 }
