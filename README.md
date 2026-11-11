@@ -42,3 +42,9 @@ The inherited Theme Manager UI, homepage, appearance preferences, `/admin` dashb
 ## Windows ESM SSR failure triage
 
 If the root route shows `ERR_UNSUPPORTED_ESM_URL_SCHEME` with a drive-letter protocol such as `d:`, the error occurs during Windows server module loading, before the infrastructure diagnostics run. The observed error string also appears in a known Nuxt Rspack/Webpack issue, but this project has **not** selected that builder. Do not claim this issue is conclusively fixed by updating Nuxt. After a locked reinstall and regeneration of `.nuxt`, rerun the local dev server and inspect the full server-side stack trace if it persists. Avoid globally disabling SSR, Node module security or replacing all absolute paths by string substitution. Server-only Temporal and PostgreSQL SDK imports have been deferred to authorised diagnostic requests to reduce eager server module loading.
+
+## Local diagnostics access
+
+Nuxt's dev request adapter may omit TCP socket metadata even for direct requests to `127.0.0.1`; an absent socket is therefore not sufficient evidence of a remote client. The API requires development mode, `NUXT_INFRA_TEST_ENABLED=true`, a loopback HTTP Host value (without trusting forwarded-host headers), and rejects non-loopback TCP addresses when they are supplied. **The actual access boundary is the Nuxt development server's listener bound to `127.0.0.1`** in `nuxt.config.ts`. Never override it with `--host 0.0.0.0`, `--public`, a tunnel or a network-facing reverse proxy. Host headers alone are spoofable and must never be treated as authentication. These diagnostics must not be used beyond this disposable local test environment.
+
+The diagnostics page is registered at `/admin/infrastructure` through the Nuxt `pages:extend` hook, retaining a flat page rather than requiring a nested `<NuxtPage />` in `/admin`.
