@@ -8,7 +8,7 @@ export default defineNuxtConfig({
     'pages:extend'(pages) {
       // Flat page to avoid requiring a nested <NuxtPage> in /admin.
       const infrastructurePage = pages.find((page) =>
-        page.file?.replaceAll('\\\\', '/').endsWith('/app/pages/admin-infrastructure.vue'),
+        page.file?.replaceAll('\\', '/').endsWith('/app/pages/admin-infrastructure.vue'),
       )
       if (infrastructurePage) infrastructurePage.path = '/admin/infrastructure'
     },
