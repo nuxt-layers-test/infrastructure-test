@@ -7,41 +7,22 @@ type Probe = { status: 'passed' | 'failed' | 'not-configured'; detail: string }
 const unavailable = (detail: string): Probe => ({ status: 'not-configured', detail })
 
 export default defineEventHandler(async (event) => {
-  // Theme Manager test mode is deliberately unauthenticated, therefore these
-  // diagnostics MUST NOT be exposed to a remote caller or in production.
-  // In Nuxt dev, getRequestIP can be absent even for a loopback request.
-  // Use only the actual TCP socket address, never Host or forwarded headers.
+  // Diagnostics are strictly for a loopback-bound local development server.
+  // Nitro's dev request adapter may omit TCP socket addresses altogether.
+  // Reject known non-loopback socket peers when available, and also restrict
+  // the HTTP Host value (do not honour forwarded host headers).
+  // Host checking is defence-in-depth, NOT a substitute for binding to loopback.
+  const loopback = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1'])
   const remoteAddress = event.node.req.socket?.remoteAddress
   const localAddress = event.node.req.socket?.localAddress
-  const loopback = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1'])
-  const developmentMode = process.env.NODE_ENV === 'development'
-  const remoteIsLoopback = loopback.has(remoteAddress || '')
-  const localIsLoopback = loopback.has(localAddress || '')
-  if (!developmentMode || !remoteIsLoopback || !localIsLoopback) {
-    // Do not include host headers, IP addresses, credentials or runtime config.
-    // This diagnostic only reports which guard failed in local development.
-    if (developmentMode) {
-      console.warn('[infrastructure-test] local diagnostic access rejected', {
-        remoteSocketPresent: Boolean(remoteAddress),
-        localSocketPresent: Boolean(localAddress),
-        remoteIsLoopback,
-        localIsLoopback,
-      })
-    }
-    throw createError({
-      statusCode: 404,
-      statusMessage: 'Not Found',
-      // Development-only booleans; never expose actual IPs, headers or secrets.
-      ...(developmentMode ? {
-        data: {
-          diagnostic: 'local-access-guard',
-          remoteSocketPresent: Boolean(remoteAddress),
-          localSocketPresent: Boolean(localAddress),
-          remoteIsLoopback,
-          localIsLoopback,
-        },
-      } : {}),
-    })
+  const host = getRequestHost(event, { xForwardedHost: false })
+  const localHost = /^(?:127\.0\.0\.1|localhost|\[::1\])(?::\d{1,5})?$/.test(host)
+
+  if (process.env.NODE_ENV !== 'development' ||
+      !localHost ||
+      (remoteAddress !== undefined && !loopback.has(remoteAddress)) ||
+      (localAddress !== undefined && !loopback.has(localAddress))) {
+    throw createError({ statusCode: 404, statusMessage: 'Not Found' })
   }
 
   const config = useRuntimeConfig(event).infraTest
