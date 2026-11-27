@@ -8,17 +8,20 @@ Start the services in [nuxt-layers/infrastructure](https://github.com/nuxt-layer
 
 Copy `.env.example` to `.env` **in this repository** and set the PostgreSQL URL to a separately provisioned diagnostic login. Never use the infrastructure bootstrap administrator. Enable diagnostics explicitly. Keep all credentials server-side. Do not publish or remotely expose this template: it includes Theme Manager's unauthenticated test mode and development-only diagnostics.
 
-**Development toolchain:** Node.js 26.13.0, Corepack 0.36.0 and pnpm 12.16.1. Run `./scripts/verify-toolchain.ps1` on Windows. Nuxt 4.6.4 (security patch), TypeScript 6.0.3 and vue-tsc 3.3.14 are pinned in `package.json`; after regenerating the lockfile, run `corepack pnpm typecheck` and `corepack pnpm build` locally or in CI. The assistant does not execute these commands.
+**Development toolchain:** Node.js 26.13.0, Corepack 0.36.0 and pnpm 12.16.1. Run `./scripts/verify-toolchain.ps1` on Windows. Nuxt 4.6.4 (security patch), TypeScript 6.0.3 and vue-tsc 3.3.14 are pinned in `package.json`; run `corepack pnpm typecheck` and `corepack pnpm build` locally or in CI. The assistant does not execute these commands.
 
-**Dependency lockfile:** This derived repository inherits the template's lockfile, which does not yet contain the new `pg` and `@temporalio/client` packages. After checking out this PR, regenerate and commit the reviewed lockfile locally using `corepack pnpm install --no-frozen-lockfile`. CI should subsequently use `corepack pnpm install --frozen-lockfile`. Do not merge the PR until this is resolved and local/CI validation passes.
+**Dependency lockfile:** pnpm 12 uses a multi-document lockfile; the second YAML document contains the application dependency graph, including pg 8.16.3 and @temporalio/client 1.24.0. Use `corepack pnpm install --frozen-lockfile`. Do not regenerate the lockfile unnecessarily.
 
 ```powershell
-corepack pnpm install --no-frozen-lockfile
+corepack pnpm install --frozen-lockfile
 corepack pnpm typecheck
-corepack pnpm dev --host 127.0.0.1
 ```
 
-Open `http://127.0.0.1:3000/admin/infrastructure` and select **Check connections**, or from another terminal run `Invoke-RestMethod http://127.0.0.1:3000/api/infrastructure/status | ConvertTo-Json -Depth 4`. Expect PostgreSQL passed and Temporal not-configured. Stop the test application and press Enter in the fixture terminal to remove its disposable database. Clear the three NUXT_INFRA_TEST_* environment variables in the application terminal afterwards.
+Open `http://127.0.0.1:3000/admin/infrastructure` and select **Check connections**, or from another terminal run `Invoke-RestMethod http://127.0.0.1:3000/api/infrastructure/status | ConvertTo-Json -Depth 4`. Expect PostgreSQL passed and Temporal not-configured. Quit Nuxt in the launcher terminal to trigger disposable database cleanup.
+
+## Local acceptance evidence
+
+Owner typecheck passed on 27 November 2026; browser diagnostics at 20:38:52 UTC confirmed PostgreSQL restricted role, private data denial and bounded pool recovery passed, with Temporal not configured. Tested implementation ae1d44d and infrastructure launcher b5269ea. Frozen install/build and final launcher cleanup evidence remain outstanding.
 
 ## What is tested
 
