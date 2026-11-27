@@ -33,30 +33,60 @@ export default defineEventHandler(async (event) => {
   let postgres: Probe = unavailable('No server-side database URL configured')
   if (config.databaseUrl) {
     // Resolve optional service clients only for an authorised diagnostic request.
-    const { Client: PgClient } = requireDependency('pg') as typeof import('pg')
-    const client = new PgClient({
+    const { Pool } = requireDependency('pg') as typeof import('pg')
+    const pool = new Pool({
+      max: 1,
+      idleTimeoutMillis: 1000,
       connectionString: config.databaseUrl,
       connectionTimeoutMillis: 3000,
       query_timeout: 3000,
       application_name: 'nuxt-layers-infrastructure-test',
     })
+    let client: import('pg').PoolClient | undefined
     try {
-      await client.connect()
+      client = await pool.connect()
       const result = await client.query(
-        "SELECT current_database() AS database_name, current_user AS role_name, current_setting('server_version_num') AS version"
+        "SELECT current_database() AS database_name, current_user AS role_name, current_setting('server_version_num') AS version, r.rolsuper, r.rolbypassrls, r.rolcreaterole, r.rolcreatedb, r.rolreplication FROM pg_roles r WHERE r.rolname = current_user"
       )
       const row = result.rows[0]
       const major = Math.floor(Number(row?.version) / 10000)
-      postgres = {
-        status: major === 18 ? 'passed' : 'failed',
-        detail: major === 18
-          ? 'PostgreSQL 18 SQL query succeeded using the configured server-side role'
-          : 'Connected PostgreSQL is not version 18',
+      if (!row || major !== 18 || row.rolsuper || row.rolbypassrls || row.rolcreaterole || row.rolcreatedb || row.rolreplication) {
+        throw new Error('Unsafe diagnostic role or incompatible database')
       }
+      // The disposable host fixture includes a protected owner table.
+      // Verify existence without querying private records; missing fixture fails closed.
+      const grants = await client.query(
+        "SELECT c.oid IS NOT NULL AS fixture_exists, CASE WHEN c.oid IS NULL THEN NULL ELSE has_table_privilege(current_user, c.oid, 'SELECT') OR has_table_privilege(current_user, c.oid, 'INSERT') OR has_table_privilege(current_user, c.oid, 'UPDATE') OR has_table_privilege(current_user, c.oid, 'DELETE') END AS unsafe_access FROM (SELECT 1) AS probe LEFT JOIN pg_namespace n ON n.nspname = 'infra_host_fixture' LEFT JOIN pg_class c ON c.relnamespace = n.oid AND c.relname = 'private_record'"
+      )
+      if (grants.rows[0]?.fixture_exists !== true || grants.rows[0]?.unsafe_access !== false) {
+        throw new Error('Missing protected fixture or unsafe diagnostic grants')
+      }
+      let denied = false
+      try {
+        await client.query('SELECT id FROM infra_host_fixture.private_record LIMIT 1')
+      } catch (error) {
+        denied = typeof error === 'object' && error !== null && 'code' in error && error.code === '42501'
+      }
+      if (!denied) throw new Error('Diagnostic role did not reject private data access')
+      // With one checked-out client, the next acquisition must time out.
+      let saturated = false
+      try {
+        const unexpected = await pool.connect()
+        unexpected.release()
+      } catch (error) {
+        saturated = error instanceof Error && error.message === 'timeout exceeded when trying to connect'
+      }
+      if (!saturated) throw new Error('Pool did not enforce bounded acquisition')
+      client.release()
+      client = undefined
+      const recovered = await pool.query('SELECT 1 AS ok')
+      if (recovered.rows[0]?.ok !== 1) throw new Error('Pool recovery failed')
+      postgres = { status: 'passed', detail: 'PostgreSQL 18 restricted-role, private data denial and bounded pool recovery succeeded' }
     } catch {
       postgres = { status: 'failed', detail: 'Database connection or read-only SQL probe failed' }
     } finally {
-      try { await client.end() } catch { /* No credentials or connection internals in output */ }
+      client?.release()
+      try { await pool.end() } catch { /* No credentials or connection internals in output */ }
     }
   }
 
