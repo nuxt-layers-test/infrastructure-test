@@ -6,7 +6,7 @@ Derived from [application-test-template](https://github.com/nuxt-layers-test/app
 
 Start the services in [nuxt-layers/infrastructure](https://github.com/nuxt-layers/infrastructure) using `.\\scripts\\start.ps1 -Temporal`. The infrastructure should already have passed its PostgreSQL and Temporal acceptance suites.
 
-Copy `.env.example` to `.env` **in this repository** and adjust the PostgreSQL URL to match the development `infrastructure/.env` credentials. Keep all credentials server-side. Do not publish or remotely expose this template: it includes Theme Manager's unauthenticated test mode and development-only diagnostics.
+Copy `.env.example` to `.env` **in this repository** and set the PostgreSQL URL to a separately provisioned diagnostic login. Never use the infrastructure bootstrap administrator. Enable diagnostics explicitly. Keep all credentials server-side. Do not publish or remotely expose this template: it includes Theme Manager's unauthenticated test mode and development-only diagnostics.
 
 **Development toolchain:** Node.js 26.13.0, Corepack 0.36.0 and pnpm 12.16.1. Run `./scripts/verify-toolchain.ps1` on Windows. Nuxt 4.6.4 (security patch), TypeScript 6.0.3 and vue-tsc 3.3.14 are pinned in `package.json`; after regenerating the lockfile, run `corepack pnpm typecheck` and `corepack pnpm build` locally or in CI. The assistant does not execute these commands.
 
@@ -22,7 +22,7 @@ Open `http://127.0.0.1:3000/admin`, then use **Infrastructure** to visit `/admin
 
 ## What is tested
 
-- PostgreSQL: a real SQL query for connection, configured role and PostgreSQL 18 server version. Queries are read-only and do not expose values to the browser.
+- PostgreSQL: real restricted login, PostgreSQL 18 version and dangerous role-flag rejection, bounded one-client pool acquisition timeout and successful reacquisition. Queries are read-only; no row values or credentials are exposed. This is a client pool fixture, not complete proof of diagnostic grants or tenant isolation.
 - Temporal: a real frontend gRPC system-info request through the TypeScript SDK. This checks the Temporal frontend but not a gateway workflow.
 
 Tests are **opt-in and fail closed**: the API route returns 404 outside development, for non-loopback requests, or unless `NUXT_INFRA_TEST_ENABLED=true`. It returns fixed outcome messages rather than exception contents, credentials or SQL results. Environment settings are read from Nuxt private `runtimeConfig`.
@@ -31,7 +31,7 @@ The Temporal Gateway repository currently lacks its public `CONTRACT.md` and imp
 
 ## Out of scope
 
-No application runtime database roles, authorisation, tenant isolation/RLS, capability data mutations, gateway workflow execution, production deployments or backups are established here. The current sample database URL uses disposable development bootstrap credentials; a dedicated least-privilege diagnostic role is required before broader integration.
+No application runtime database roles, authorisation, tenant isolation/RLS, capability data mutations, gateway workflow execution, production deployments or backups are established here. The sample database URL is empty; a separately provisioned least-privilege diagnostic role is mandatory. The endpoint refuses powerful role flags but the infrastructure acceptance suite must prove actual grants.
 
 All tests and builds must be performed by CI or the user's local machine, not by the assistant.
 
