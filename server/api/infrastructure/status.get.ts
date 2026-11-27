@@ -53,6 +53,21 @@ export default defineEventHandler(async (event) => {
       if (!row || major !== 18 || row.rolsuper || row.rolbypassrls || row.rolcreaterole || row.rolcreatedb || row.rolreplication) {
         throw new Error('Unsafe diagnostic role or incompatible database')
       }
+      // The disposable host fixture includes a protected owner table.
+      // Verify existence without querying private records; missing fixture fails closed.
+      const grants = await client.query(
+        "SELECT c.oid IS NOT NULL AS fixture_exists, CASE WHEN c.oid IS NULL THEN NULL ELSE has_table_privilege(current_user, c.oid, 'SELECT') OR has_table_privilege(current_user, c.oid, 'INSERT') OR has_table_privilege(current_user, c.oid, 'UPDATE') OR has_table_privilege(current_user, c.oid, 'DELETE') END AS unsafe_access FROM (SELECT 1) AS probe LEFT JOIN pg_namespace n ON n.nspname = 'infra_host_fixture' LEFT JOIN pg_class c ON c.relnamespace = n.oid AND c.relname = 'private_record'"
+      )
+      if (grants.rows[0]?.fixture_exists !== true || grants.rows[0]?.unsafe_access !== false) {
+        throw new Error('Missing protected fixture or unsafe diagnostic grants')
+      }
+      let denied = false
+      try {
+        await client.query('SELECT id FROM infra_host_fixture.private_record LIMIT 1')
+      } catch (error) {
+        denied = typeof error === 'object' && error !== null && 'code' in error && error.code === '42501'
+      }
+      if (!denied) throw new Error('Diagnostic role did not reject private data access')
       // With one checked-out client, the next acquisition must time out.
       let saturated = false
       try {
@@ -66,7 +81,7 @@ export default defineEventHandler(async (event) => {
       client = undefined
       const recovered = await pool.query('SELECT 1 AS ok')
       if (recovered.rows[0]?.ok !== 1) throw new Error('Pool recovery failed')
-      postgres = { status: 'passed', detail: 'PostgreSQL 18 restricted-role probe and bounded pool recovery succeeded' }
+      postgres = { status: 'passed', detail: 'PostgreSQL 18 restricted-role, private data denial and bounded pool recovery succeeded' }
     } catch {
       postgres = { status: 'failed', detail: 'Database connection or read-only SQL probe failed' }
     } finally {

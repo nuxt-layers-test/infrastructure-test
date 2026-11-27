@@ -18,11 +18,11 @@ corepack pnpm typecheck
 corepack pnpm dev --host 127.0.0.1
 ```
 
-Open `http://127.0.0.1:3000/admin`, then use **Infrastructure** to visit `/admin/infrastructure` and select **Check connections**.
+Open `http://127.0.0.1:3000/admin/infrastructure` and select **Check connections**, or from another terminal run `Invoke-RestMethod http://127.0.0.1:3000/api/infrastructure/status | ConvertTo-Json -Depth 4`. Expect PostgreSQL passed and Temporal not-configured. Stop the test application and press Enter in the fixture terminal to remove its disposable database. Clear the three NUXT_INFRA_TEST_* environment variables in the application terminal afterwards.
 
 ## What is tested
 
-- PostgreSQL: real restricted login, PostgreSQL 18 version and dangerous role-flag rejection, bounded one-client pool acquisition timeout and successful reacquisition. Queries are read-only; no row values or credentials are exposed. This is a client pool fixture, not complete proof of diagnostic grants or tenant isolation.
+- PostgreSQL: real restricted login, PostgreSQL 18 version and dangerous role-flag rejection, protected owner-table grant inspection and actual access rejection (SQLSTATE 42501), bounded one-client pool acquisition timeout and successful reacquisition. Queries are read-only; no row values or credentials are exposed. This is a client pool fixture, not complete proof of diagnostic grants or tenant isolation.
 - Temporal: a real frontend gRPC system-info request through the TypeScript SDK. This checks the Temporal frontend but not a gateway workflow.
 
 Tests are **opt-in and fail closed**: the API route returns 404 outside development, for non-loopback requests, or unless `NUXT_INFRA_TEST_ENABLED=true`. It returns fixed outcome messages rather than exception contents, credentials or SQL results. Environment settings are read from Nuxt private `runtimeConfig`.
